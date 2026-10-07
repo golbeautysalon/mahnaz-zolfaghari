@@ -20,12 +20,24 @@ body{min-height:100vh;background:radial-gradient(circle at 50% 20%,#7a284a,#3b0d
 .contact-title{font-size:34px;font-weight:bold;color:#a80856;margin:4px 0 14px}
 .contact-text{font-size:20px;line-height:1.75;margin:2px 0}
 .contact-phone{font-size:23px;font-weight:bold;color:#7b1743;margin:7px 0;direction:rtl}
-@media(max-width:700px){.shell{height:68vh;min-height:390px}}
-
-.installBtn{display:none;margin:7px auto 9px;border:1px solid #c8a35d;background:#fff;color:#7b1743;border-radius:999px;padding:9px 18px;font:inherit;cursor:pointer}
+@media(max-width:700px){.wrap{padding:6px}.shell{height:64vh;min-height:360px}.navBtn,.installBtn{padding:8px 14px;font-size:14px}}
+.installBtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin:7px auto 7px;border:1px solid #c8a35d;background:#fff;color:#7b1743;border-radius:999px;padding:10px 20px;font:inherit;font-weight:bold;cursor:pointer;box-shadow:0 5px 16px #0004}.installBtn:active{transform:scale(.98)}
+.navBtns{display:flex;justify-content:center;gap:10px;margin:0 auto 8px;direction:rtl}
+.navBtn{border:1px solid #c8a35d;background:#fff;color:#7b1743;border-radius:999px;padding:9px 22px;font:inherit;cursor:pointer;min-width:92px}
+.iosHelp{display:none}.installOverlay{position:fixed;inset:0;background:#0009;z-index:99999;display:none;align-items:center;justify-content:center;padding:18px}.installOverlay.show{display:flex}.installWizard{width:min(94vw,470px);background:#fff;color:#4f1029;border:2px solid #c8a35d;border-radius:22px;padding:20px 18px;box-shadow:0 22px 60px #0008;text-align:right;position:relative}.wizardClose{position:absolute;left:12px;top:10px;border:0;background:#f3e9ed;color:#7b1743;width:34px;height:34px;border-radius:50%;font-size:22px;cursor:pointer}.wizardTitle{text-align:center;font-size:24px;font-weight:bold;margin:5px 32px 8px}.wizardSub{text-align:center;font-size:14px;line-height:1.8;margin-bottom:14px}.wizardStep{display:flex;gap:10px;align-items:flex-start;background:#faf7f5;border:1px solid #ead5df;border-radius:14px;padding:10px;margin:8px 0;line-height:1.8}.stepNo{flex:0 0 30px;height:30px;border-radius:50%;background:#7b1743;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold}.wizardAction{width:100%;border:0;background:#7b1743;color:#fff;border-radius:999px;padding:11px 16px;font:inherit;font-weight:bold;margin-top:10px;cursor:pointer}.wizardNote{text-align:center;font-size:12px;opacity:.8;margin-top:10px}
+.navBtn:disabled{opacity:.45;cursor:default}
 </style></head><body><div class="wrap">
 <h1>آلبوم نمونه‌کارهای مهناز ذوالفقاری</h1>
-<button id="installBtn" class="installBtn">ذخیره آلبوم روی گوشی</button><div class="hint">صفحه را با انگشت یا ماوس از راست به چپ ورق بزنید</div>
+<button id="installBtn" class="installBtn">📱 نصب آلبوم روی گوشی</button><div class="hint">صفحه را با انگشت یا ماوس از راست به چپ ورق بزنید</div>
+<div id="iosHelp" class="iosHelp"></div>
+<div id="installOverlay" class="installOverlay" role="dialog" aria-modal="true">
+ <div class="installWizard">
+  <button id="wizardClose" class="wizardClose" aria-label="بستن">×</button>
+  <div id="wizardTitle" class="wizardTitle">نصب آلبوم روی گوشی</div>
+  <div id="wizardBody"></div>
+ </div>
+</div>
+<div class="navBtns"><button id="prevBtn" class="navBtn">قبلی</button><button id="nextBtn" class="navBtn">بعدی</button></div>
 <div class="shell"><div id="book">
 <div class="page"><div style="width:100%;height:100%;background:#faf7f5"></div></div>
 <div class="page back-cover contact-page" data-density="hard">
@@ -55,24 +67,43 @@ window.addEventListener("load",()=>{
  maxShadowOpacity:.55,showCover:true,mobileScrollSupport:false,usePortrait:true,flippingTime:900,
  swipeDistance:20,useMouseEvents:true,autoSize:true,drawShadow:true});
  pf.loadFromHTML(document.querySelectorAll(".page"));
- setTimeout(()=>{pf.turnToPage(document.querySelectorAll(".page").length-1);},120);
+ document.getElementById("nextBtn").addEventListener("click",()=>pf.flipPrev("top"));
+ document.getElementById("prevBtn").addEventListener("click",()=>pf.flipNext("top"));
+ setTimeout(()=>pf.turnToPage(document.querySelectorAll(".page").length-1),120);
 });
 </script><script>
 let deferredInstall=null;
 const installBtn=document.getElementById('installBtn');
-window.addEventListener('beforeinstallprompt',e=>{
- e.preventDefault(); deferredInstall=e; installBtn.style.display='inline-block';
-});
+const overlay=document.getElementById('installOverlay');
+const wizardBody=document.getElementById('wizardBody');
+const wizardClose=document.getElementById('wizardClose');
+const ua=navigator.userAgent||'';
+const isIOS=/iphone|ipad|ipod/i.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const isAndroid=/android/i.test(ua);
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+const showWizard=html=>{wizardBody.innerHTML=html;overlay.classList.add('show');};
+const hideWizard=()=>overlay.classList.remove('show');
+wizardClose.addEventListener('click',hideWizard);
+overlay.addEventListener('click',e=>{if(e.target===overlay)hideWizard();});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;});
 installBtn.addEventListener('click',async()=>{
- if(!deferredInstall)return;
- deferredInstall.prompt();
- await deferredInstall.userChoice;
- deferredInstall=null;
- installBtn.style.display='none';
+ if(isStandalone){showWizard('<div class="wizardSub">✅ این آلبوم قبلاً روی گوشی شما نصب شده است.</div>');return;}
+ if(deferredInstall){
+   showWizard('<div class="wizardSub">گوشی شما آماده نصب است.</div><button id="directInstall" class="wizardAction">نصب مستقیم آلبوم</button><div class="wizardNote">پس از لمس دکمه، پنجره نصب گوشی نمایش داده می‌شود.</div>');
+   document.getElementById('directInstall').onclick=async()=>{hideWizard();deferredInstall.prompt();const choice=await deferredInstall.userChoice;if(choice.outcome==='accepted')installBtn.textContent='✓ آلبوم نصب شد';deferredInstall=null;};
+   return;
+ }
+ if(isIOS){
+   showWizard('<div class="wizardSub">برای قرار گرفتن آلبوم مثل یک برنامه روی صفحه گوشی:</div><div class="wizardStep"><span class="stepNo">۱</span><div>این صفحه را با <b>Safari</b> باز کنید.</div></div><div class="wizardStep"><span class="stepNo">۲</span><div>دکمه <b>Share</b> (مربع با فلش رو به بالا) را لمس کنید.</div></div><div class="wizardStep"><span class="stepNo">۳</span><div><b>Add to Home Screen</b> را انتخاب کنید.</div></div><div class="wizardStep"><span class="stepNo">۴</span><div>بالای صفحه روی <b>Add</b> بزنید.</div></div><div class="wizardNote">بعد از آن، آیکون آلبوم مهناز روی صفحه اصلی گوشی دیده می‌شود.</div>');
+   return;
+ }
+ if(isAndroid){
+   showWizard('<div class="wizardSub">اگر پنجره نصب مستقیم نمایش داده نشد:</div><div class="wizardStep"><span class="stepNo">۱</span><div>منوی مرورگر <b>⋮</b> را باز کنید.</div></div><div class="wizardStep"><span class="stepNo">۲</span><div>گزینه <b>Install app</b> یا <b>Add to Home screen</b> را بزنید.</div></div><div class="wizardStep"><span class="stepNo">۳</span><div><b>Install / Add</b> را تأیید کنید.</div></div><div class="wizardNote">در Chrome و مرورگرهای سازگار، پس از آماده شدن PWA دکمه نصب مستقیم فعال می‌شود.</div>');
+   return;
+ }
+ showWizard('<div class="wizardSub">برای نصب آلبوم، منوی مرورگر را باز کرده و گزینه <b>Install app</b> یا <b>Add to Home screen</b> را انتخاب کنید.</div>');
 });
-window.addEventListener('appinstalled',()=>installBtn.style.display='none');
-if('serviceWorker' in navigator){
- window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
-}
+window.addEventListener('appinstalled',()=>{installBtn.textContent='✓ آلبوم نصب شد';hideWizard();});
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));}
 </script>
 </body></html>
